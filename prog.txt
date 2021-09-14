@@ -1,0 +1,14 @@
+{ 
+    let i = 1 ; 
+    let base = 1 ; 
+
+    let test = ( 3 * ( 6 + 7 ) - 4 % 3 ) ; 
+
+    /* calculating_factorial */ 
+    while ( i != 5 ) 
+    { 
+        let base = base * i ; 
+        let i = i + 1 ; 
+        print base ;
+    } 
+}
