@@ -120,7 +120,7 @@ Note that atleast one blank character is mandatory even after ; and braces, the 
 ----
 </br>
 
-### Konsole
+### How to Run
 ```
 $ ghc -o a interpreter.hs
 $ ./a
