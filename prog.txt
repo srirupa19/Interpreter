@@ -1,14 +1,19 @@
 { 
-    let i = 1 ; 
-    let base = 1 ; 
+    int i = 1 ; 
+    int base = 1 ; 
 
-    let test = ( 3 * ( 6 + 7 ) - 4 % 3 ) ; 
+    int test = ( 3 * ( 6 + 7 ) - 4 % 3 ) ; 
+    bool a = 4 < 7 ; 
+    string str1 = ' Hello ' ; 
+
+    print %b True ; 
+    print %s str1 + ' World ' ; 
 
     /* calculating_factorial */ 
     while ( i != 5 ) 
     { 
-        let base = base * i ; 
-        let i = i + 1 ; 
-        print base ;
+        int base = base * i ; 
+        int i = i + 1 ; 
+        print %i base ;
     } 
 }
