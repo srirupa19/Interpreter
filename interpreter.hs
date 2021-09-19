@@ -527,7 +527,7 @@ listToString (xs:x) str = listToString x (str ++ xs ++ " ")
 
 main :: IO()
 main = do
-    contents <- readFile "1.txt"
+    contents <- readFile "prog.txt"
     let g = fst . block . words $ contents
     let h = evalBlock g empty
     showEnv . assocs $ h

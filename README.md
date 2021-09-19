@@ -53,6 +53,7 @@ Note that atleast one blank character is mandatory even after ; and braces, the 
 ```
     1.  Space seperated comments
     2.  Space insensitive langauage
+    3.  Local scopes are not present, everything belongs to global scope
 ```
 
 ----
