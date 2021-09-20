@@ -23,7 +23,8 @@ A simple interpreter written in Haskell for a Python like language. Currently, o
                 } 
         }
 
-    Output : num 6
+    Output : print "First Program "
+             num 6
 
 
     2.  
@@ -41,8 +42,9 @@ A simple interpreter written in Haskell for a Python like language. Currently, o
 
         }
 
-    Output : i 0
-             print 5 4 3 2 1 
+    Output : a True
+             i 0
+             print True 5 4 3 2 1 
 ```
 
 Note that atleast one blank character is mandatory even after ; and braces, the text inside the comment must not be space seperated and indentations do not matter. All boolean variables should be referred as bool:: var_name except while assigning values. The syntax for print is different based on if it is used to print an integer(print %i), string(print %s) or a boolean value(print %b).
