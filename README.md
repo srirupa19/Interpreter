@@ -1,25 +1,24 @@
 # Interpreter in Haskell
 
-A simple interpreter written in Haskell for a Python like language. Currently, only space seperated terminals work.
-
+A monadic interpreter written in Haskell for a Python like language. 
 -----
 
 ### Examples of Valid Expressions
 ``` 
     1.  
         { 
-            int num = 5 ; 
-            string str = ' First Program ' ; 
-            print %s str ;
+            int num = 5; 
+            string str = "First Program"; 
+            print(%c, str);
 
-            if ( num > 3 ) 
+            if (num > 3) 
                 then 
                 { 
-                    int num = 6 ; 
+                    int num = 6; 
                 } 
                 else 
                 { 
-                    print %i num ; 
+                    print (%i, num); 
                 } 
         }
 
@@ -29,15 +28,15 @@ A simple interpreter written in Haskell for a Python like language. Currently, o
 
     2.  
         { 
-            int i = 5 ;
-            bool a = 4 < 3 | 6 != 7 ;
-            print %b bool:: a ;
+            int i = 5;
+            bool a = (4 < 3) || 6 != 7;
+            print(%b, a);
 
-            /* First_while! */
-            while ( i != 0 & bool:: a ) 
+            # First While! #
+            while(i != 0 && a) 
             { 
-                print %i i ; 
-                int i = i - 1 ; 
+                print(%i, i); 
+                int i = i - 1; 
             }
 
         }
@@ -47,24 +46,15 @@ A simple interpreter written in Haskell for a Python like language. Currently, o
              print True 5 4 3 2 1 
 ```
 
-Note that atleast one blank character is mandatory even after ; and braces, the text inside the comment must not be space seperated and indentations do not matter. All boolean variables should be referred as bool:: var_name except while assigning values. The syntax for print is different based on if it is used to print an integer(print %i), string(print %s) or a boolean value(print %b).
+Note that the syntax for print is different based on if it is used to print an integer(print %i), string(print %c) or a boolean value(print %b).
 
 ----
 
 ### Currently Unsupported Features
 ```
-    1.  Space seperated comments
-    2.  Space insensitive langauage
-    3.  Local scopes are not present, everything belongs to global scope
+    1.  Local scopes are not present, everything belongs to global scope
 ```
 
-----
-
-### Possible Improvements
-```
-    1. Making the grammar more concise.
-    2. Boolean variables without the bool:: prefix.
-```
 ----
 
 ### Grammar used for Interpreter
@@ -77,45 +67,35 @@ Note that atleast one blank character is mandatory even after ; and braces, the 
         : Statement Part
         | IfStatement Part
         | WhileLoop Part
-        | Comment Part
+        | Comment String Part
         | epsilon
 
-    Comment 
-        : */ string */
-
     Statement 
-        : int var = ArithExpr ;
+        : int var = Expr ;
         | bool var = LogicExpr ;
         | string var = StrExpt ;
-        | print %i ArithExpr ;
-        | print %b LogicExpr ;
-        | print %s StrExpr ;
+        | print(%i, Expr) ;
+        | print(%b, LogicExpr) ;
+        | print(%c, StrExpr) ;
 
     StrExpr 
         : Sentences + StrExpr
-        | epsilon
+        | Sentences
 
     Sentenes
-        : "Phrases"
+        : string
         | var
 
-    Phrases
-        : string Phrases
-        | epsilon
-
     IfStatement
-        : if ( BoolExpr ) then Block else Block
+        : if ( LogicExpr ) then Block else Block
 
     WhileLoop
-        : while ( BoolExpr ) Block 
+        : while ( LogicExpr ) Block 
 
     LogicExpr
-        : BoolExpr LogicBool
-
-    LogicBool
-        : BoolExpr & LogicBool
-        | BoolExpr | LogicBool
-        | epsilon
+        : BoolExpr && LogicExpr
+        | BoolExpr || LogicExpr
+        | BoolExpr
 
     BoolExpr 
         : True
@@ -125,33 +105,23 @@ Note that atleast one blank character is mandatory even after ; and braces, the 
         | var
 
     ArithBoolExpr
-        : ArithExpr > ArithExpr
-        | ArithExpr < ArithExpr
-        | ArithExpr == ArithExpr
-        | ArithExpr != ArithExpr
-
-    ArithExpr 
-        : FactorExpr Expr
+        : Expr > Expr
+        | Expr < Expr
+        | Expr == Expr
+        | Expr != Expr
 
     Expr 
-        : FactorExpr + Expr
-        | FactorExpr - Expr
-        | epsilon
-
-    FactorExpr 
-        : SignExpr HiExpr
+        : HiExpr + Expr
+        | HiExpr - Expr
+        | HiExpr
 
     HiExpr 
         : SignExpr * HiExpr
         | SignExpr / HiExpr
         | SignExpr % HiExpr
-        | epsilon 
+        | SignExpr 
 
     SignExpr
-        : - Numbers
-        | Numbers
-
-    Numbers 
         : int
         | ( ArithExpr )
         | var
