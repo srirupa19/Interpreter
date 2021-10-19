@@ -145,22 +145,18 @@ data WhileLoop
     deriving Show
 
 data Statement
-    = ArithStmt String Expr
-    | BoolStmt String LogicExpr
-    | StrStmt String StrExpr
-    | PrintNum Expr
-    | PrintStr StrExpr
-    | PrintBool LogicExpr
+    = Stmt String AllExpr
+    | Print AllExpr
     deriving Show
 
-data StrExpr
-    = Add Sentences StrExpr
+data AllExpr
+    = Add Sentences AllExpr
     | E4 Sentences
     deriving Show
 
 data Sentences
     = Str String
-    | VarStr String
+    | B LogicExpr
     deriving Show
 
 data LogicExpr
@@ -173,8 +169,6 @@ data BoolExpr
     = T
     | F
     | ArithBool ArithBoolExpr
-    | BracBool LogicExpr
-    | VarBool String
     deriving Show
 
 data ArithBoolExpr
@@ -182,6 +176,7 @@ data ArithBoolExpr
     | Less Expr Expr
     | Equal Expr Expr
     | NotEq Expr Expr
+    | A Expr
     deriving Show
 
 data Expr
@@ -199,8 +194,8 @@ data HiExpr
 
 data SignExpr
     = Digit Int
-    | BracExpr Expr
-    | VarNum String
+    | BracExpr AllExpr
+    | Var String
     deriving Show
 
 block :: Parser Block
@@ -239,7 +234,6 @@ ifStatement
     symbol "("
     x1 <- logicExpr
     symbol ")"
-    symbol "then"
     x2 <- block
     symbol "else"
     IfElseStmt x1 x2 <$> block
@@ -255,51 +249,22 @@ whileLoop
 statement :: Parser Statement
 statement
     = do
-    symbol "int"
     x1 <- identifier
     symbol "="
-    ArithStmt x1 <$> expr
-    <|> do
-    symbol "bool"
-    x1 <- identifier
-    symbol "="
-    BoolStmt x1 <$> logicExpr
-    <|> do
-    symbol "string"
-    x1 <- identifier
-    symbol "="
-    StrStmt x1 <$> strExpr
+    Stmt x1 <$> allExpr
     <|> do
     symbol "print"
     symbol "("
-    symbol "%i"
-    symbol ","
-    x1 <- expr
+    x1 <- allExpr
     symbol ")"
-    return (PrintNum x1)
-    <|> do
-    symbol "print"
-    symbol "("
-    symbol "%b"
-    symbol ","
-    x1 <- logicExpr
-    symbol ")"
-    return (PrintBool x1)
-    <|> do
-    symbol "print"
-    symbol "("
-    symbol "%c"
-    symbol ","
-    x1 <- strExpr
-    symbol ")"
-    return (PrintStr x1)
+    return (Print x1)
 
-strExpr :: Parser StrExpr
-strExpr
+allExpr :: Parser AllExpr
+allExpr
     = do
     x1 <- sentences
-    symbol "+"
-    Add x1 <$> strExpr
+    symbol "++"
+    Add x1 <$> allExpr
     <|> E4 <$> sentences
 
 sentences :: Parser Sentences
@@ -310,7 +275,7 @@ sentences
     symbol "\""
     return (Str x1)
     <|> do
-    VarStr <$> identifier
+    B <$> logicExpr
 
 logicExpr :: Parser LogicExpr
 logicExpr
@@ -333,14 +298,7 @@ boolExpr
     symbol "False"
     return F
     <|> do
-    symbol "("
-    x1 <- logicExpr
-    symbol ")"
-    return (BracBool x1)
-    <|> do
     ArithBool <$> arithBoolExpr
-    <|> do
-    VarBool <$> identifier
 
 arithBoolExpr :: Parser ArithBoolExpr
 arithBoolExpr
@@ -360,6 +318,8 @@ arithBoolExpr
     x1 <- expr
     symbol "!="
     NotEq x1 <$> expr
+    <|> do
+    A <$> expr
 
 expr :: Parser Expr
 expr
@@ -395,171 +355,137 @@ signExpr :: Parser SignExpr
 signExpr
     = do
     symbol "("
-    x1 <- expr
+    x1 <- allExpr
     symbol ")"
     return (BracExpr x1)
     <|> do Digit <$> integer
-    <|> do VarNum <$> identifier
+    <|> do Var <$> identifier
 
 -- Stores variable values
-type Environment = Map String [String]
+type Environment = Map (String, Int) [String]
 
 -- Functions below take the output of the parser and evaluates it
-evalBlock :: Block -> Environment -> Environment
+evalBlock :: Block -> Int -> Environment -> Environment
 evalBlock (Brac _part)
     = evalPart _part
 
-evalPart :: Part -> Environment -> Environment
-evalPart (Ignore _comm _part) env
-    = evalPart _part env
-evalPart (PA _stmt _part) env
+evalPart :: Part -> Int -> Environment -> Environment
+evalPart (Ignore _comm _part) i env
+    = evalPart _part i env
+evalPart (PA _stmt _part) i env
     = do
-    let env' = evalStatement _stmt env
-    evalPart _part env'
-evalPart (Conditional _cond _part) env
+    let env' = evalStatement _stmt i env
+    evalPart _part i env'
+evalPart (Conditional _cond _part) i env
     = do
-    let env' = evalIfStatement _cond env
-    evalPart _part env'
-evalPart (Loop _loop _part) env
+    let env' = evalIfStatement _cond i env
+    evalPart _part i env'
+evalPart (Loop _loop _part) i env
     = do
-    let env' = evalWhileLoop _loop env
-    evalPart _part env'
-evalPart End env
+    let env' = evalWhileLoop _loop i env
+    evalPart _part i env'
+evalPart End i env
     = env
 
-evalWhileLoop :: WhileLoop -> Environment -> Environment
-evalWhileLoop (While _cond _body) env
+evalWhileLoop :: WhileLoop -> Int -> Environment -> Environment
+evalWhileLoop (While _cond _body) i env
     = do
-    let cond = evalLogicExpr _cond env
-    if cond
+    let cond = evalLogicExpr _cond i env
+    if read cond :: Bool
         then do
-            let env' = evalBlock _body env
-            evalWhileLoop (While _cond _body) env'
+            let env' = evalBlock _body i env
+            evalWhileLoop (While _cond _body) i env'
         else env
 
-evalIfStatement :: IfStatement -> Environment -> Environment
-evalIfStatement (IfElseStmt _boolExpr _condTrue _condFalse) env
+evalIfStatement :: IfStatement -> Int-> Environment -> Environment
+evalIfStatement (IfElseStmt _boolExpr _condTrue _condFalse) i env
     = do
-    let cond = evalLogicExpr _boolExpr env
-    let env' = if cond then evalBlock _condTrue env else evalBlock _condFalse env
+    let cond = evalLogicExpr _boolExpr i env
+    let env' = if read cond :: Bool then evalBlock _condTrue i env else evalBlock _condFalse i env
     env'
 
-evalLogicExpr :: LogicExpr -> Environment -> Bool
-evalLogicExpr (And be le) env = evalBoolExpr be env && evalLogicExpr le env
-evalLogicExpr (Or be le) env = evalBoolExpr be env || evalLogicExpr le env
-evalLogicExpr (E5 be) env = evalBoolExpr be env
+evalLogicExpr :: LogicExpr -> Int -> Environment -> String
+evalLogicExpr (And be le) i env = show((read (evalBoolExpr be i env) :: Bool) && read(evalLogicExpr le i env) :: Bool)
+evalLogicExpr (Or be le) i env = show((read (evalBoolExpr be i env) :: Bool) || read(evalLogicExpr le i env) :: Bool)
+evalLogicExpr (E5 be) i env = evalBoolExpr be i env
 
-evalBoolExpr :: BoolExpr -> Environment -> Bool
-evalBoolExpr T env = True
-evalBoolExpr F env = False
-evalBoolExpr (ArithBool abe) env
-    = evalArithBoolExpr abe env
-evalBoolExpr (BracBool le) env
-    = evalLogicExpr le env
-evalBoolExpr (VarBool b) env
-    = do
-    let boolStr = head (env ! b)
-    let boo = read boolStr :: Bool
-    boo
+evalBoolExpr :: BoolExpr -> Int -> Environment -> String
+evalBoolExpr T i env = show True
+evalBoolExpr F i env = show False
+evalBoolExpr (ArithBool abe) i env
+    = evalArithBoolExpr abe i env
 
-evalArithBoolExpr :: ArithBoolExpr -> Environment -> Bool
-evalArithBoolExpr (Greater a1 a2) env
+evalArithBoolExpr :: ArithBoolExpr -> Int -> Environment -> String
+evalArithBoolExpr (Greater a1 a2) i env
     = do
-    let c1 = evalExpr a1 env
-    let c2 = evalExpr a2 env
-    c1 > c2
-evalArithBoolExpr (Less a1 a2) env
+    let c1 = evalExpr a1 i env
+    let c2 = evalExpr a2 i env
+    show ((read c1 :: Int) > (read c2 :: Int))
+evalArithBoolExpr (Less a1 a2) i env
     = do
-    let c1 = evalExpr a1 env
-    let c2 = evalExpr a2 env
-    c1 < c2
-evalArithBoolExpr (Equal a1 a2) env
+    let c1 = evalExpr a1 i env
+    let c2 = evalExpr a2 i env
+    show ((read c1 :: Int) < (read c2 :: Int))
+evalArithBoolExpr (Equal a1 a2) i env
     = do
-    let c1 = evalExpr a1 env
-    let c2 = evalExpr a2 env
-    c1 == c2
-evalArithBoolExpr (NotEq a1 a2) env
+    let c1 = evalExpr a1 i env
+    let c2 = evalExpr a2 i env
+    show ((read c1 :: Int) == (read c2 :: Int))
+evalArithBoolExpr (NotEq a1 a2) i env
     = do
-    let c1 = evalExpr a1 env
-    let c2 = evalExpr a2 env
-    c1 /= c2
+    let c1 = evalExpr a1 i env
+    let c2 = evalExpr a2 i env
+    show ((read c1 :: Int) /= (read c2 :: Int))
+evalArithBoolExpr (A a) i env = evalExpr a i env
 
-evalStatement :: Statement -> Environment -> Environment
-evalStatement (ArithStmt var _arithExpr) env
+evalStatement :: Statement -> Int -> Environment -> Environment
+evalStatement (Stmt var _allExpr) i env
     = do
-    let output = evalExpr _arithExpr env
-    Data.Map.insert var [show output] env
-evalStatement (BoolStmt var _boolExpr) env
+    let output = evalAllExpr _allExpr i env
+    Data.Map.insert (var, i) [output] env
+evalStatement (Print _allExpr) i env
     = do
-    let output = evalLogicExpr _boolExpr env
-    Data.Map.insert var [show output] env
-evalStatement (StrStmt var _strExpr) env
-    = do
-    let output = evalStrExpr _strExpr env
-    Data.Map.insert var [output] env
-evalStatement (PrintNum _arithExpr) env
-    = do
-    let output = evalExpr _arithExpr env
-    if member "print" env
+    let output = evalAllExpr _allExpr i env
+    if member ("print", 0) env
         then do
-            let prev = env ! "print"
-            Data.Map.insert "print" (prev ++ [show output]) env
-        else Data.Map.insert "print" [show output] env
-evalStatement (PrintStr _strExpr) env
+            let prev = env ! ("print", 0)
+            Data.Map.insert ("print", 0) (prev ++ [output]) env
+        else Data.Map.insert ("print", 0) [output] env
+
+evalAllExpr :: AllExpr -> Int -> Environment -> String
+evalAllExpr (Add sent str) i env = evalSentences sent i env ++ evalAllExpr str i env
+evalAllExpr (E4 sent) i env = evalSentences sent i env
+
+evalSentences :: Sentences -> Int -> Environment -> String
+evalSentences (Str ph) i env = ph
+evalSentences (B b) i env = evalLogicExpr b i env
+
+evalExpr :: Expr -> Int -> Environment -> String
+evalExpr (E1 e1) i env = evalHiExpr e1 i env
+evalExpr (Plus f1 e2) i env = show ((read (evalHiExpr f1 i env) :: Int) + read (evalExpr e2 i env) :: Int)
+evalExpr (Minus f1 e2) i env = show ((read (evalHiExpr f1 i env) :: Int) - read(evalExpr e2 i env) :: Int)
+
+evalHiExpr :: HiExpr -> Int -> Environment -> String
+evalHiExpr (E2 h1) i env = evalSignExpr h1 i env
+evalHiExpr (Mul n1 h2) i env = show ((read (evalSignExpr n1 i env) :: Int) * read (evalHiExpr h2 i env) :: Int)
+evalHiExpr (Div n1 h2) i env = show ((read (evalSignExpr n1 i env) :: Int) `div` read (evalHiExpr h2 i env) :: Int)
+evalHiExpr (Mod n1 h2) i env =  show ((read (evalSignExpr n1 i env) :: Int) `mod` read (evalHiExpr h2 i env) :: Int)
+
+evalSignExpr :: SignExpr -> Int -> Environment -> String
+evalSignExpr (Digit n) i env = show n
+evalSignExpr (BracExpr _bracExpr) i env = evalAllExpr _bracExpr i env
+evalSignExpr (Var s) i env
     = do
-    let output = evalStrExpr _strExpr env
-    if member "print" env
-        then do
-            let prev = env ! "print"
-            Data.Map.insert "print" (prev ++ [show output]) env
-        else Data.Map.insert "print" [show output] env
-evalStatement (PrintBool _logicExpr) env
-    = do
-    let output = evalLogicExpr _logicExpr env
-    if member "print" env
-        then do
-            let prev = env ! "print"
-            Data.Map.insert "print" (prev ++ [show output]) env
-        else Data.Map.insert "print" [show output] env
+    let numStr = head (env ! (s, i))
+    numStr
 
-evalStrExpr :: StrExpr -> Environment -> String
-evalStrExpr (Add sent str) env = evalSentences sent env ++ evalStrExpr str env
-evalStrExpr (E4 sent) env = evalSentences sent env
-
-evalSentences :: Sentences -> Environment -> String
-evalSentences (Str ph) env = ph
-evalSentences (VarStr s) env
-    = do
-    let varStr = head (env ! s)
-    varStr
-
-evalExpr :: Expr -> Environment -> Int
-evalExpr (E1 e1) env = evalHiExpr e1 env
-evalExpr (Plus f1 e2) env = evalHiExpr f1 env + evalExpr e2 env
-evalExpr (Minus f1 e2) env = evalHiExpr f1 env - evalExpr e2 env
-
-evalHiExpr :: HiExpr -> Environment -> Int
-evalHiExpr (E2 h1) env = evalSignExpr h1 env
-evalHiExpr (Mul n1 h2) env = evalSignExpr n1 env * evalHiExpr h2 env
-evalHiExpr (Div n1 h2) env = evalSignExpr n1 env `div` evalHiExpr h2 env
-evalHiExpr (Mod n1 h2) env = evalSignExpr n1 env `mod` evalHiExpr h2 env
-
-evalSignExpr :: SignExpr -> Environment -> Int
-evalSignExpr (Digit n) env = n
-evalSignExpr (BracExpr _bracExpr) env = evalExpr _bracExpr env
-evalSignExpr (VarNum s) env
-    = do
-    let numStr = head (env ! s)
-    let num = read numStr :: Int
-    num
-
-showEnv :: [(String, [String])] -> IO ()
+showEnv :: [((String, Int), [String])] -> IO ()
 showEnv [] = putStr ""
 showEnv ((str, int):rem)
     = do
-    if str /= "print"
-        then putStrLn (str ++ " " ++ head int)
-        else putStrLn (str ++ " " ++ listToString int "")
+    if str /= ("print", 0)
+        then putStrLn (fst str ++ " " ++ head int)
+        else putStrLn (fst str ++ " " ++ listToString int "")
     showEnv rem
 
 listToString :: [String] -> String -> String
@@ -571,7 +497,5 @@ main = do
     contents <- readFile "prog.txt"
     let a = parse block contents
     let b = fst . head $ a
-    let h = evalBlock b Data.Map.empty
+    let h = evalBlock b 0 Data.Map.empty
     showEnv . assocs $ h
-
-

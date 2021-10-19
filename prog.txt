@@ -1,19 +1,19 @@
 { 
-    int i = 1; 
-    int base = 1; 
+    i = 1; 
+    base = 1; 
 
-    int test = (3 * (6 + 7) - 4 % 3); 
-    bool a = 4 < 7 && True; 
-    string str1 = "Hello World, I'm here! "; 
+    test = 3 * (6 + 7) - 4 % 3; 
+    a = 4 < 7 && True; 
+    str1 = "Hello World, I'm here! "; 
 
-    print(%b, True && a); 
-    print(%c, str1 + "How are you, World?"); 
+    print(True && a); 
+    print(str1 ++ "How are you, World?"); 
 
     # Calculating Factorial # 
-    while ( i != 5 ) 
+    while (i != 5) 
     { 
-        int base = base * i; 
-        int i = i + 1; 
-        print(%i, base);
+        base = base * i; 
+        i = i + 1; 
+        print(base);
     } 
 }

@@ -7,36 +7,35 @@ A monadic interpreter written in Haskell for a Python like language.
 ``` 
     1.  
         { 
-            int num = 5; 
-            string str = "First Program"; 
-            print(%c, str);
+            num = 5; 
+            str = "First Program"; 
+            print(str);
 
-            if (num > 3) 
-                then 
+            if (num > 3)  
                 { 
-                    int num = 6; 
+                    num = 6; 
                 } 
                 else 
                 { 
-                    print (%i, num); 
+                    print(num); 
                 } 
         }
 
-    Output : print "First Program "
+    Output : print "First Program"
              num 6
 
 
     2.  
         { 
-            int i = 5;
-            bool a = (4 < 3) || 6 != 7;
-            print(%b, a);
+            i = 5;
+            a = (4 < 3) || 6 != 7;
+            print(a);
 
             # First While! #
             while(i != 0 && a) 
             { 
-                print(%i, i); 
-                int i = i - 1; 
+                print(i); 
+                i = i - 1; 
             }
 
         }
@@ -44,15 +43,6 @@ A monadic interpreter written in Haskell for a Python like language.
     Output : a True
              i 0
              print True 5 4 3 2 1 
-```
-
-Note that the syntax for print is different based on if it is used to print an integer(print %i), string(print %c) or a boolean value(print %b).
-
-----
-
-### Currently Unsupported Features
-```
-    1.  Local scopes are not present, everything belongs to global scope
 ```
 
 ----
@@ -71,23 +61,19 @@ Note that the syntax for print is different based on if it is used to print an i
         | epsilon
 
     Statement 
-        : int var = Expr ;
-        | bool var = LogicExpr ;
-        | string var = StrExpt ;
-        | print(%i, Expr) ;
-        | print(%b, LogicExpr) ;
-        | print(%c, StrExpr) ;
+        : var = AllExpr;
+        | print( AllExpr );
 
-    StrExpr 
-        : Sentences + StrExpr
+    AllExpr 
+        : Sentences ++ AllExpr
         | Sentences
 
     Sentenes
         : string
-        | var
+        | LogicExpr
 
     IfStatement
-        : if ( LogicExpr ) then Block else Block
+        : if ( LogicExpr ) Block else Block
 
     WhileLoop
         : while ( LogicExpr ) Block 
@@ -101,14 +87,13 @@ Note that the syntax for print is different based on if it is used to print an i
         : True
         | False
         | ArithBoolExpr
-        | ( LogicExpr )
-        | var
 
     ArithBoolExpr
         : Expr > Expr
         | Expr < Expr
         | Expr == Expr
         | Expr != Expr
+        | Expr
 
     Expr 
         : HiExpr + Expr
@@ -123,7 +108,7 @@ Note that the syntax for print is different based on if it is used to print an i
 
     SignExpr
         : int
-        | ( ArithExpr )
+        | ( AllExpr )
         | var
 
 ----
