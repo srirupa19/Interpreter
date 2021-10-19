@@ -1,6 +1,6 @@
 # Interpreter in Haskell
 
-A monadic interpreter written in Haskell for a Python like language. 
+An interpreter written in Haskell for a Python like language. 
 -----
 
 ### Examples of Valid Expressions
